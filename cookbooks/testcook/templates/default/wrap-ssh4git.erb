@@ -1,0 +1,1 @@
+exec ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "/home/#{node[:base][:username]}/.ssh/deploy_key" "$@"
