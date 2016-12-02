@@ -27,17 +27,24 @@ end
 template '/etc/php.ini' do
     source 'php.erb'
     mode '0644'
-    owner 'root'
-    group 'root'
+#    owner 'root'
+#    group 'root'
 end
 
 #add nginx virtualhost config for WordPress site
+directory '/etc/nginx/conf.d' do
+    mode '0755'
+    action :create
+end
+
+
 template '/etc/nginx/conf.d/wordpress.conf' do
     source 'wordpress.erb'
     mode '0644'
-    owner 'root'
-    group 'root'
+#    owner 'root'
+#    group 'root'
 end
+
 
 #enable and start installed services
 service 'php-fpm' do
@@ -52,10 +59,31 @@ service 'mariadb' do
     action [:enable, :start]
 end
 
+
+
+# store database credentials in encrypted databag
+
+# 1. Encrypted databag secret file was generated: openssl rand -base64 512 > ~/chef_repo/.chef/encrypted_data_bag_secret
+# 2. Encrypted databag and item with id 'credentials' was created: knife data bag create db_credentials credentials --secret-file ~/chef_repo/.chef/encrypted_data_bag_secre
+# 3. In editor mode three items, insted of 'id' were added (see below):
+# \{
+#  "id": "credentials",
+#  "user": "wpuser",
+#  "pass": "wppass",
+#  "db": "wordpress"
+# \}
+# 5. Encrypted databag secret file was copied to the specified node: scp ~/chef-repo/.chef/encrypted_data_bag_secret root@chefclient.example.com:/etc/chef/
+
+secret = Chef::EncryptedDataBagItem.load_secret("/etc/chef/encrypted_data_bag_secret")
+db_credentials = Chef::EncryptedDataBagItem.load("db_credentials", "credentials", secret)
+mysql_user = db_credentials["user"]
+mysql_pass = db_credentials["pass"]
+mysql_db = db_credentials["db"]
+
 #create an empty database for wordpress app and grant all privs on it
 #to wordpress user
 execute 'db-initial' do
-  command 'mysql -e \'create database wordpress;\' && mysql -e \'GRANT ALL PRIVILEGES ON wordpress.* TO "wpuser"@"localhost" IDENTIFIED BY "wppass";\' && mysql -e \'FLUSH PRIVILEGES;\''
+    command "mysql -e \"create database #{mysql_db};\" && mysql -e \"GRANT ALL PRIVILEGES ON #{mysql_db}.* TO #{mysql_user}@localhost IDENTIFIED BY \\\"#{mysql_pass}\\\";\" && mysql -e \"FLUSH PRIVILEGES;\""
     ignore_failure true
 end
 
@@ -118,8 +146,14 @@ directory '/root/.ssh' do
 end
 
 
-#wordpress config creation
+# wordpress config creation
+# db credentials load from encrypted databag items
 template '/var/www/wordpress/wp-config.php' do
     source 'wp-config.erb'
     mode '0644'
+    variables({
+        :mysql_user => "#{mysql_user}",
+        :mysql_db => "#{mysql_db}",
+        :mysql_pass => "#{mysql_pass}"
+          })
 end
