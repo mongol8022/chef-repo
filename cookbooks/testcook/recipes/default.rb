@@ -64,7 +64,8 @@ end
 # store database credentials in encrypted databag
 
 # 1. Encrypted databag secret file was generated: openssl rand -base64 512 > ~/chef_repo/.chef/encrypted_data_bag_secret
-# 2. Encrypted databag and item with id 'credentials' was created: knife data bag create db_credentials credentials --secret-file ~/chef_repo/.chef/encrypted_data_bag_secre
+# 2. Option 'knife[:secret_file]  = "#{current_dir}/encrypted_data_bag_secret"' added to 'knife.rb'
+# 2. Encrypted databag and item with id 'credentials' was created: knife data bag create db_credentials credentials --encrypt
 # 3. In editor mode three items, insted of 'id' were added (see below):
 # \{
 #  "id": "credentials",
@@ -80,15 +81,15 @@ mysql_user = db_credentials["user"]
 mysql_pass = db_credentials["pass"]
 mysql_db = db_credentials["db"]
 
-#create an empty database for wordpress app and grant all privs on it
-#to wordpress user
+# create an empty database for wordpress app and grant all privs on it
+# to wordpress user
 execute 'db-initial' do
     command "mysql -e \"create database #{mysql_db};\" && mysql -e \"GRANT ALL PRIVILEGES ON #{mysql_db}.* TO #{mysql_user}@localhost IDENTIFIED BY \\\"#{mysql_pass}\\\";\" && mysql -e \"FLUSH PRIVILEGES;\""
-    ignore_failure true
+#ignore_failure true
 end
 
 
-#deploy WordPress from git using private repo (auth by key)
+# deploy WordPress from git using private repo (auth by key)
 
 # install git if not already installed
 package 'git'  do
@@ -152,8 +153,8 @@ template '/var/www/wordpress/wp-config.php' do
     source 'wp-config.erb'
     mode '0644'
     variables({
-        :mysql_user => "#{mysql_user}",
-        :mysql_db => "#{mysql_db}",
-        :mysql_pass => "#{mysql_pass}"
+        :mysql_user => db_credentials["user"],
+        :mysql_db => db_credentials["db"],
+        :mysql_pass => db_credentials["pass"]
           })
 end
