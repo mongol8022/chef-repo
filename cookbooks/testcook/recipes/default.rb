@@ -127,13 +127,13 @@ template '/root/.ssh/deploy_key' do
     mode '0600'
 end
 
-deploy 'private_repo' do
-    repo 'git@github.com/WordPress/WordPress.git'
-    user 'nginx'
-    deploy_to '/var/www/wordpress'
-    ssh_wrapper '/tmp/.ssh/wrap-ssh4git.sh'
-    action :deploy
-end
+#deploy 'private_repo' do
+#    repo 'git@github.com/WordPress/WordPress.git'
+#    user 'nginx'
+#    deploy_to '/var/www/wordpress'
+#    ssh_wrapper '/tmp/.ssh/wrap-ssh4git.sh'
+#    action :deploy
+#end
 
 # delete temporary dirs
 directory '/tmp/.ssh' do
