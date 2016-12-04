@@ -76,7 +76,7 @@ end
 # 5. Encrypted databag secret file was copied to the specified node: scp ~/chef-repo/.chef/encrypted_data_bag_secret root@chefclient.example.com:/etc/chef/
 
 secret = Chef::EncryptedDataBagItem.load_secret("/etc/chef/encrypted_data_bag_secret")
-db_credentials = Chef::EncryptedDataBagItem.load("db_credentials", "credentials", secret)
+db_credentials = Chef::EncryptedDataBagItem.load("db_credentials", "credentials.json", secret)
 mysql_user = db_credentials["user"]
 mysql_pass = db_credentials["pass"]
 mysql_db = db_credentials["db"]
@@ -127,13 +127,13 @@ template '/root/.ssh/deploy_key' do
     mode '0600'
 end
 
-#deploy 'private_repo' do
-#    repo 'git@github.com/WordPress/WordPress.git'
-#    user 'nginx'
-#    deploy_to '/var/www/wordpress'
-#    ssh_wrapper '/tmp/.ssh/wrap-ssh4git.sh'
-#    action :deploy
-#end
+deploy 'private_repo' do
+    repo 'git@github.com/WordPress/WordPress.git'
+    user 'nginx'
+    deploy_to '/var/www/wordpress'
+    ssh_wrapper '/tmp/.ssh/wrap-ssh4git.sh'
+    action :deploy
+end
 
 # delete temporary dirs
 directory '/tmp/.ssh' do

@@ -1,0 +1,30 @@
+{
+  "name": "wpserver",
+  "normal": {
+    "tags": null,
+    "chef_provisioning": {
+      "from_image": null,
+      "reference": {
+        "driver_url": "docker:unix:///var/run/docker.sock",
+        "driver_version": "0.10.0",
+        "allocated_at": "2016-12-04 21:35:08 UTC",
+        "host_node": "chefzero://localhost:8889/nodes/",
+        "container_name": "wpserver",
+        "image_id": null,
+        "docker_options": {
+          "base_image": {
+            "name": "centos",
+            "repository": "centos",
+            "tag": "7.2"
+          },
+          "command": "service nginx start && service php-fpm start && service mariadb start"
+        },
+        "container_id": null
+      }
+    }
+  },
+  "run_list": [
+    "recipe[default]",
+    "recipe[testcook]"
+  ]
+}
