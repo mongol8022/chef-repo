@@ -91,7 +91,7 @@ end
 
 # deploy WordPress from git using private repo (auth by key)
 
-# install git if not already installed
+# install git if not installed yet
 package 'git'  do
   action :install
 end
