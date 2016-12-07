@@ -66,7 +66,7 @@ end
 # 1. Encrypted databag secret file was generated: openssl rand -base64 512 > ~/chef_repo/.chef/encrypted_data_bag_secret
 # 2. Option 'knife[:secret_file]  = "#{current_dir}/encrypted_data_bag_secret"' added to 'knife.rb'
 # 2. Encrypted databag and item with id 'credentials' was created: knife data bag create db_credentials credentials --encrypt
-# 3. In editor mode three items, insted of 'id' were added (see below):
+# 3. In editor mode three items, besides 'id' were added (see below):
 # \{
 #  "id": "credentials",
 #  "user": "wpuser",
@@ -76,7 +76,7 @@ end
 # 5. Encrypted databag secret file was copied to the specified node: scp ~/chef-repo/.chef/encrypted_data_bag_secret root@chefclient.example.com:/etc/chef/
 
 secret = Chef::EncryptedDataBagItem.load_secret("/etc/chef/encrypted_data_bag_secret")
-db_credentials = Chef::EncryptedDataBagItem.load("db_credentials", "credentials.json", secret)
+db_credentials = Chef::EncryptedDataBagItem.load("db_credentials", "credentials", secret)
 mysql_user = db_credentials["user"]
 mysql_pass = db_credentials["pass"]
 mysql_db = db_credentials["db"]
@@ -85,7 +85,7 @@ mysql_db = db_credentials["db"]
 # to wordpress user
 execute 'db-initial' do
     command "mysql -e \"create database #{mysql_db};\" && mysql -e \"GRANT ALL PRIVILEGES ON #{mysql_db}.* TO #{mysql_user}@localhost IDENTIFIED BY \\\"#{mysql_pass}\\\";\" && mysql -e \"FLUSH PRIVILEGES;\""
-#ignore_failure true
+ignore_failure true
 end
 
 
@@ -96,6 +96,7 @@ package 'git'  do
   action :install
 end
 
+#create temporary dirs
 directory '/tmp/.ssh' do
     mode '0755'
     action :create
@@ -112,27 +113,33 @@ directory '/root/.ssh' do
 end
 
 
-template '/tmp/.ssh/wrap-ssh4git.sh' do
-    source 'wrap-ssh4git.erb'
-    mode '0770'
+cookbook_file '/tmp/.ssh/wrap-ssh4git.sh' do
+  source 'wrap-ssh4git.sh'
+  mode '0770'
+  action :create
 end
 
-template '/root/.ssh/deploy_key_pub' do
-    source 'deploy_key_pub.erb'
-    mode '0600'
+# on chef workstation:
+#generate json-file with itmes: id 'secretkey' and 'ssh-key' which contents the private key file:
+#ruby -rjson -e 'puts JSON.generate({"id" => "secretkey", "ssh-key" => File.read("id_rsa.erb")})' > ssh-private.json
+
+#create an encrypted data bag from file ssh-privare.json:
+#knife data bag create key --encrypt
+#knife data bag from file key ssh-private.json --encrypt
+
+#now load ssh private key to file from encrypted data bag
+sshkey = Chef::EncryptedDataBagItem.load("key", "secretkey", secret)
+
+file '/root/.ssh/id_rsa' do
+  content sshkey["ssh-key"]
+  mode 0600
 end
 
-template '/root/.ssh/deploy_key' do
-    source 'deploy_key.erb'
-    mode '0600'
-end
-
-deploy 'private_repo' do
-    repo 'git@github.com/WordPress/WordPress.git'
-    user 'nginx'
-    deploy_to '/var/www/wordpress'
-    ssh_wrapper '/tmp/.ssh/wrap-ssh4git.sh'
-    action :deploy
+git '/var/www/wordpress' do
+  repository 'git@bitbucket.org:kudaev/wordpress.git'
+  revision 'master'
+  action :sync
+  ssh_wrapper '/tmp/.ssh/wrap-ssh4git.sh'
 end
 
 # delete temporary dirs
